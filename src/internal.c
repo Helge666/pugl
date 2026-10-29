@@ -323,8 +323,20 @@ puglDispatchEvent(PuglView* view, const PuglEvent* event)
     if (!(st0 = view->backend->enter(view, &event->expose))) {
       const PuglWorldState old_state = view->world->state;
 
-      view->world->state = PUGL_WORLD_EXPOSING;
-      st0                = view->eventFunc(view, event);
+      view->world->state       = PUGL_WORLD_EXPOSING;
+      view->world->exposeStart = puglGetTime(view->world);
+#ifdef __cplusplus
+      // A draw that throws must not leave the world "exposing": every later
+      // redisplay request would be refused and the view would never be drawn
+      // again, while the plugin behind it runs on (DPF compiles pugl as C++).
+      try {
+        st0 = view->eventFunc(view, event);
+      } catch (...) {
+        st0 = PUGL_UNKNOWN_ERROR;
+      }
+#else
+      st0 = view->eventFunc(view, event);
+#endif
       view->world->state = old_state;
       st1                = view->backend->leave(view, &event->expose);
     }

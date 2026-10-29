@@ -1197,9 +1197,23 @@ puglGetTime(const PuglWorld* world)
           world->startTime);
 }
 
+/* The world stuck in EXPOSING -- a draw that never returned (an exception the
+   window procedure swallowed, a fault in the driver) -- refuses every redisplay
+   for good: the view freezes while its plugin runs on.  No real expose lasts a
+   second, so after that the state is taken to be stale and reset. */
+static void
+puglHealStaleExpose(PuglView* view)
+{
+  if (view->world->state == PUGL_WORLD_EXPOSING &&
+      puglGetTime(view->world) - view->world->exposeStart > 1.0) {
+    view->world->state = PUGL_WORLD_IDLE;
+  }
+}
+
 PuglStatus
 puglObscureView(PuglView* view)
 {
+  puglHealStaleExpose(view);
   return view->world->state == PUGL_WORLD_EXPOSING
            ? PUGL_BAD_CALL
            : puglWinStatus(InvalidateRect(view->impl->hwnd, NULL, false));
@@ -1212,6 +1226,7 @@ puglObscureRegion(PuglView* const view,
                   const unsigned  width,
                   const unsigned  height)
 {
+  puglHealStaleExpose(view);
   if (view->world->state == PUGL_WORLD_EXPOSING) {
     return PUGL_BAD_CALL;
   }

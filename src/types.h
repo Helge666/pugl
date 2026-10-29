@@ -70,6 +70,7 @@ struct PuglWorldImpl {
   char*               strings[PUGL_NUM_STRING_HINTS];
   PuglWorldType       type;
   PuglWorldState      state;
+  double              exposeStart; ///< When the world last entered EXPOSING
 };
 
 /// Opaque surface used by graphics backend
